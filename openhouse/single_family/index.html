@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single-Family Home Open House Kit</title>
+<style>
+/* VOICE: the listing agent at the door: clear, factual, friendly. Describe the property, never who it "suits".
+   IDEA: the paper flyer + clipboard sign-in sheet, rebuilt as one phone page fed by a Google Sheet.
+   LAYOUT: hero photo, price + key facts, sticky tabs, the agent's sections, sticky sign-in bar. Engine = guidebook/wedding. */
+:root{--main:#1F3A4D;--accent:#C7893E;--soft:#E9EEF1;--paper:#FAFAF7;--head:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;--body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:root{--ink:#1d2327;--muted:#5a646b;--line:color-mix(in srgb,var(--main) 14%,transparent);--card:#fff}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--body);overflow-x:clip;overflow-wrap:anywhere;padding-bottom:84px}
+h1,h2,h3{font-family:var(--head);font-weight:600;line-height:1.15;text-wrap:balance;margin:0}
+.wrap{max-width:760px;margin:0 auto;background:var(--paper)}
+a{color:var(--main)}
+.hero{position:relative}
+.hero .pic{position:relative;aspect-ratio:4/3;max-height:62vh;width:100%;overflow:hidden;background:var(--soft)}
+.hero .pic img,.hero .pic svg{width:100%;height:100%;object-fit:cover;display:block}
+.badge{position:absolute;left:14px;bottom:14px;background:var(--accent);color:#fff;font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;padding:9px 12px;border-radius:6px}
+[dir=rtl] .badge{left:auto;right:14px}
+.sum{padding:18px max(5vw,18px) 6px}
+.price{font:700 clamp(30px,8vw,40px)/1.1 var(--head);color:var(--main)}
+.price small{font:500 16px var(--body);color:var(--muted);margin-inline-start:6px}
+.sum h1{font-size:clamp(20px,5vw,26px);color:var(--ink);margin:6px 0 4px}
+.addr{color:var(--muted);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px;padding:0;list-style:none}
+.chips li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;color:var(--muted)}
+.chips b{display:block;color:var(--ink);font-size:17px}
+.next{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,#fff);font-size:15px}
+.next b{color:var(--main)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sum .row{margin:16px 0 6px}
+.btn{appearance:none;border:0;cursor:pointer;font:600 16px var(--body);min-height:48px;padding:12px 20px;border-radius:12px;background:var(--main);color:#fff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.big{flex:1 1 220px}
+.btn.ghost{background:var(--card);color:var(--main);border:1.5px solid var(--main)}
+.btn.sm{min-height:44px;padding:9px 16px;font-size:15px}
+.btn:focus-visible,nav.tabs a:focus-visible,.langs select:focus-visible,.langs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.consent{font-size:13px;color:var(--muted);margin:6px 0 0}
+.langs{position:absolute;z-index:3;right:12px;top:12px;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.langs button{all:unset;cursor:pointer;font:600 13px var(--body);color:var(--main);padding:8px 11px;min-height:22px;line-height:22px;border-radius:999px}
+.langs button[aria-pressed=true]{background:var(--main);color:#fff}
+.langs select{appearance:none;background:transparent;border:0;color:var(--main);font:600 15px var(--body);padding:8px 14px;min-height:40px;cursor:pointer}
+[dir=rtl] .langs{right:auto;left:12px}
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:4px;overflow-x:auto;padding:10px 14px;scrollbar-width:none}
+nav.tabs a{flex:none;color:var(--ink);text-decoration:none;font-size:15px;padding:8px 14px;border-radius:999px}
+nav.tabs a.on{background:var(--main);color:#fff}
+section{padding:30px max(5vw,18px) 6px;scroll-margin-top:60px}
+section h2{font-size:24px;color:var(--main);margin-bottom:14px}
+.list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.item h3{font-size:18px;color:var(--ink);margin-bottom:2px}
+.item p{margin:0;color:var(--muted);white-space:pre-line}
+.item .note{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.02em;margin-bottom:4px}
+.item .row{margin-top:10px}
+.hl li{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:start}
+.hl li::before{content:"";width:22px;height:22px;border-radius:50%;margin-top:1px;background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat}
+.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border:1px solid var(--line);border-radius:12px;background:var(--card);margin:0;overflow:hidden}
+.facts div{padding:12px 14px;border-bottom:1px solid var(--line)}
+.facts div:nth-child(odd){border-inline-end:1px solid var(--line)}
+.facts dt{font-size:13px;color:var(--muted)}.facts dd{margin:0;font-weight:600}
+/* QC: keep "2,140 sq ft" in order on RTL pages */
+.chips b,.facts dd{unicode-bidi:plaintext}[dir=rtl] .facts dd{text-align:right}
+.gal{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.gal a{display:block;position:relative;border-radius:10px;overflow:hidden;aspect-ratio:4/3;background:var(--soft)}
+.gal a:first-child:nth-last-child(odd),.gal a:last-child:nth-child(odd){grid-column:span 2;aspect-ratio:16/9}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.gal span{position:absolute;inset:auto 0 0;padding:18px 10px 8px;font-size:13px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+.room{display:grid;grid-template-columns:1fr auto;gap:12px}
+.room img{width:84px;height:84px;object-fit:cover;border-radius:8px}
+.fine{font-size:13px;color:var(--muted);margin:12px 0 0}
+.oh li{display:grid;grid-template-columns:64px 1fr;gap:14px}
+.cal{background:var(--main);color:#fff;border-radius:10px;text-align:center;padding:8px 4px;align-self:start;line-height:1.1}
+.cal small{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.cal b{font:700 26px var(--head)}
+.oh .when{font-weight:600;color:var(--ink);unicode-bidi:plaintext}
+.agent{display:grid;grid-template-columns:72px 1fr;gap:14px;align-items:center}
+.agent .av{width:72px;height:72px;border-radius:50%;background:var(--main);color:#fff;display:grid;place-items:center;font:700 24px var(--head);overflow:hidden}
+.agent .av img{width:100%;height:100%;object-fit:cover}
+.agent h3{font-size:20px}.agent .sub{color:var(--muted);font-size:14px}
+.agent .row,.agent p{grid-column:1/-1}
+.signin{background:color-mix(in srgb,var(--main) 7%,#fff);border:1px solid var(--line);border-radius:14px;padding:18px}
+.signin iframe{width:100%;height:1250px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:12px}
+.bar{position:fixed;z-index:9;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--line);display:flex;gap:8px;justify-content:center;transform:translateY(110%);transition:transform .2s}
+.bar.on{transform:none}
+.bar .btn{flex:1;max-width:460px}
+footer{margin-top:34px;padding:26px max(5vw,18px) 30px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+footer p{margin:0 0 8px}
+.demo{font-weight:600}
+.state{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}.gal a:first-child:nth-last-child(odd),.gal a:last-child:nth-child(odd){grid-column:auto;aspect-ratio:4/3}.facts{grid-template-columns:repeat(3,1fr)}.facts div:nth-child(odd){border-inline-end:0}.facts div{border-inline-end:1px solid var(--line)}.bar{display:none}body{padding-bottom:0}}
+@media(prefers-reduced-motion:reduce){.bar{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="state"><p>Loading…</p></div></div>
+<div class="bar" id="bar"></div>
+<script>
+{
+const SAMPLE={"Basics": "Setting,Value,Help,Value (en),Value (es),Value (fr),Value (de),Value (it),Value (pt),Value (zh),Value (ja),Value (ko),Value (ar),Value (hi),Value (ru)\nheadline,Bright 4-bedroom home with a renovated kitchen,One line under the price. Translated.,,Luminosa casa de 4 dormitorios con cocina renovada,Maison lumineuse de 4 chambres avec cuisine rénovée,,,,,,,منزل مشرق من 4 غرف نوم مع مطبخ مُجدَّد,,\nstatus,For sale,\"e.g. For sale, Price reduced, Under contract. Translated.\",,En venta,À vendre,,,,,,,للبيع,,\naddress,\"1428 Larkspur Lane, Fernbrook\",Shown in the hero and used for the Map and calendar buttons. Not translated.,,,,,,,,,,,,\nprice,\"$489,000\",\"As you want it shown, e.g. $489,000 or 450.000 €.\",,,,,,,,,,,,\nprice_note,,\"Optional, e.g. / month, or 'Offers over'. Translated.\",,,,,,,,,,,,\nbeds,4,Number of bedrooms.,,,,,,,,,,,,\nbaths,2.5,e.g. 2.5,,,,,,,,,,,,\narea,\"2,140\",\"Living area, number only, e.g. 2,140\",,,,,,,,,,,,\nlot,0.24 acre,e.g. 0.24 acre or 650 m²,,,,,,,,,,,,\nyear_built,1998,e.g. 1998,,,,,,,,,,,,\nparking,2-car garage,e.g. 2-car garage. Translated.,,,,,,,,,,,,\narea_unit,sq ft,sq ft or m²,,,,,,,,,,,,\nsignin_link,https://forms.gle/your-sign-in-form,Your Google Form link (Send > link icon). Empty = the button is hidden.,,,,,,,,,,,,\nsignin_style,Button,Button (opens the form; works everywhere) or Embedded (form inside the page; needs the long docs.google.com/forms link).,,,,,,,,,,,,\nagent_name,Jordan Avery,Shown on the agent card and the QR sign.,,,,,,,,,,,,\nagent_title,Listing agent,e.g. Listing agent. Translated.,,,,,,,,,,,,\nagent_phone,(555) 010-4477,Call and Text buttons.,,,,,,,,,,,,\nagent_email,jordan.avery@example.com,Email button.,,,,,,,,,,,,\nbrokerage,Sample Brokerage Co.,\"Brokerage or company name, as it must appear.\",,,,,,,,,,,,\nlicense,Lic. #00000000 (sample),Optional licence number.,,,,,,,,,,,,\ndisclaimer,\"Information is provided by the seller and agent, is believed accurate but not guaranteed, and should be verified independently.\",Small print at the bottom of the page. Translated.,,,,,,,,,,,,\nwritten_in,en,\"The language you write in: en, es, fr, de, it, pt, zh, ja, ko, ar, hi or ru.\",,,,,,,,,,,,\nlanguages,All,\"All = 12 languages. Or list them, e.g. en, es.\",,,,,,,,,,,,\n", "Sections": "Section,Type,Show,Section (en),Section (es),Section (fr),Section (de),Section (it),Section (pt),Section (zh),Section (ja),Section (ko),Section (ar),Section (hi),Section (ru)\nHighlights,Highlights,Yes,,Lo más destacado,Points forts,,,,,,,أبرز المزايا,,\nKey facts,Facts,Yes,,Datos clave,Caractéristiques,,,,,,,معلومات أساسية,,\nPhotos,Gallery,Yes,,Fotos,Photos,,,,,,,الصور,,\nRoom by room,Rooms,Yes,,Habitación por habitación,Pièce par pièce,,,,,,,غرفة بغرفة,,\nNeighborhood & schools,Area,Yes,,Barrio y colegios,Quartier et écoles,,,,,,,الحي والمدارس,,\nOpen house,Times,Yes,,Puertas abiertas,Visite libre,,,,,,,اليوم المفتوح,,\nDocuments,Links,Yes,,Documentos,Documents,,,,,,,المستندات,,\nYour agent,Agent,Yes,,Tu agente,Votre agent,,,,,,,وكيلك,,\nSign in,SignIn,Yes,,Registro,Inscription,,,,,,,التسجيل,,\n", "Details": "Section,Date,Start,End,Title,Note,Text,Link,Show,Title (en),Note (en),Text (en),Title (es),Note (es),Text (es),Title (fr),Note (fr),Text (fr),Title (de),Note (de),Text (de),Title (it),Note (it),Text (it),Title (pt),Note (pt),Text (pt),Title (zh),Note (zh),Text (zh),Title (ja),Note (ja),Text (ja),Title (ko),Note (ko),Text (ko),Title (ar),Note (ar),Text (ar),Title (hi),Note (hi),Text (hi),Title (ru),Note (ru),Text (ru)\nHighlights,,,,Renovated kitchen (2024),,\"Quartz counters, gas range, walk-in pantry.\",,Yes,,,,Cocina renovada (2024),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nHighlights,,,,Primary suite on the main floor,,Walk-in closet and a double-sink bath.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nHighlights,,,,New roof and water heater (2023),,Receipts available on request.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nHighlights,,,,Fenced backyard with patio,,Mature maple trees and a garden shed.,,Yes,,,,Patio trasero vallado con terraza,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nKey facts,,,,Heating / cooling,Gas forced air / central air,,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nKey facts,,,,Annual property tax,\"$5,120 (2026, per county record)\",,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nKey facts,,,,HOA,None,,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,Front of the house,,,photos/front.svg,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,Kitchen,,,photos/kitchen.svg,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,Living room,,,photos/living.svg,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,Primary bedroom,,,photos/bedroom.svg,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,Backyard,,,photos/backyard.svg,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nPhotos,,,,All photos,,Google Drive folder with every photo.,https://drive.google.com/drive/folders/EXAMPLE_folder_id_not_real_000,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Kitchen,14 x 16 ft · Main floor,\"Quartz counters, island seating for 3, gas range, dishwasher (2024), walk-in pantry.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Living room,18 x 15 ft · Main floor,\"Gas fireplace, built-in shelves, large south-facing windows.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Primary bedroom,15 x 13 ft · Main floor,Walk-in closet; bath with double sinks and a walk-in shower.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Bedrooms 2-4,11 x 11 ft each · Upstairs,\"Ceiling fans, double closets; shared full bath with tub.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Laundry / mudroom,Main floor,\"Washer and dryer included, bench and hooks by the garage door.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nRoom by room,,,,Basement,\"Unfinished, 900 sq ft\",\"Dry, with a sump pump (2022). Room for storage or a workshop.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nNeighborhood & schools,,,,Parks,,\"Larkspur Park (playground, tennis courts) is 0.3 mi away.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nNeighborhood & schools,,,,Shopping & transit,,Grocery store 1.1 mi. Bus line 12 stops at Larkspur & 3rd.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nNeighborhood & schools,,,,School district,,Fernbrook Sample School District. School assignments can change: confirm with the district.,https://example.com/school-district,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nOpen house,2027-04-17,1:00 PM,4:00 PM,Saturday open house,,Street parking on Larkspur Lane. Please remove shoes or use the covers by the door.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nOpen house,2027-04-18,12:00 PM,3:00 PM,Sunday open house,,,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nDocuments,,,,Floor plan (PDF),,,https://example.com/floor-plan,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nDocuments,,,,3D virtual tour,,,https://example.com/virtual-tour,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nDocuments,,,,Seller's disclosure (ask the agent),,,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nYour agent,,,,,,\"Ask me anything about the home, or book a private showing.\",,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\nSign in,,,,,,Visiting today? Sign in so the agent can send you the floor plan and any updates.,,Yes,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n", "Look": "Setting,Value,Help\nmain_color,#1F3A4D,\"Headings, buttons and the QR sign band.\"\naccent_color,#C7893E,\"Price, lines and highlights.\"\nhero_photo,,Main photo: a Google Drive share link (Anyone with the link) or a .jpg link. Empty = illustration.\nagent_photo,,Optional headshot for the agent card (Drive share link).\n"};
+const COVER="<svg class=\"cover\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 600\" preserveAspectRatio=\"xMidYMid slice\" role=\"img\" aria-label=\"House illustration\"><rect width=\"800\" height=\"600\" fill=\"#DCE6EC\"/><circle cx=\"660\" cy=\"110\" r=\"46\" fill=\"#F6E7B8\"/><path d=\"M0 470 Q200 430 400 455 T800 440 V600 H0Z\" fill=\"#9DB89A\"/><rect x=\"250\" y=\"250\" width=\"330\" height=\"230\" fill=\"#F4F1EA\"/><path d=\"M225 262 L415 140 L605 262Z\" style=\"fill:var(--main)\"/><rect x=\"505\" y=\"160\" width=\"34\" height=\"70\" fill=\"#8C6A57\"/><rect x=\"385\" y=\"360\" width=\"64\" height=\"120\" rx=\"4\" style=\"fill:var(--accent)\"/><circle cx=\"437\" cy=\"422\" r=\"4\" fill=\"#fff\"/><g fill=\"#B9D3E0\" stroke=\"#fff\" stroke-width=\"6\"><rect x=\"285\" y=\"300\" width=\"70\" height=\"60\"/><rect x=\"480\" y=\"300\" width=\"70\" height=\"60\"/><rect x=\"285\" y=\"395\" width=\"70\" height=\"55\"/><rect x=\"480\" y=\"395\" width=\"70\" height=\"55\"/></g><rect x=\"372\" y=\"480\" width=\"90\" height=\"120\" fill=\"#D9CFC0\"/><g fill=\"#6E9A6B\"><circle cx=\"160\" cy=\"400\" r=\"62\"/><circle cx=\"120\" cy=\"430\" r=\"44\"/><circle cx=\"690\" cy=\"410\" r=\"54\"/></g><rect x=\"152\" y=\"440\" width=\"14\" height=\"60\" fill=\"#7A5C48\"/><rect x=\"684\" y=\"450\" width=\"12\" height=\"50\" fill=\"#7A5C48\"/></svg>";
+const UI={
+en:{signin:"Sign in / request info",consent:"By signing in, you agree that {agent} may contact you about this property by phone, text or email. Message and data rates may apply. Reply STOP to opt out of texts.",theAgent:"the listing agent",call:"Call",text:"Text",email:"Email",beds:"Bedrooms",baths:"Bathrooms",area:"Living area",lot:"Lot",year_built:"Year built",parking:"Parking",floor:"Floor",map:"Map",cal:"Add to calendar",open:"Open",photos:"See all photos",next:"Next open house",noTimes:"No open house is scheduled right now. Contact the agent to book a private showing.",areaNote:"Neighborhood and school information is provided by the seller. Please verify it with the schools and local sources directly.",demoSignin:"Sample page: in your copy, this button opens your own sign-in form.",formTab:"Open the form in a new tab",sample:"Sample property page. The property, agent and brokerage are fictional.",err:"We couldn't load this page. Please check your connection and try again.",retry:"Try again"},
+es:{signin:"Registrarse / pedir información",consent:"Al registrarte, aceptas que {agent} te contacte sobre esta propiedad por teléfono, mensaje de texto o correo electrónico. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para dejar de recibir mensajes de texto.",theAgent:"el agente de esta propiedad",call:"Llamar",text:"Mensaje",email:"Correo",beds:"Dormitorios",baths:"Baños",area:"Superficie",lot:"Terreno",year_built:"Año de construcción",parking:"Estacionamiento",floor:"Planta",map:"Mapa",cal:"Añadir al calendario",open:"Abrir",photos:"Ver todas las fotos",next:"Próxima jornada de puertas abiertas",noTimes:"No hay jornadas de puertas abiertas programadas. Contacta con el agente para una visita privada.",areaNote:"La información sobre el barrio y los colegios la proporciona el vendedor. Verifícala directamente con los colegios y fuentes locales.",demoSignin:"Página de ejemplo: en tu copia, este botón abre tu propio formulario de registro.",formTab:"Abrir el formulario en una pestaña nueva",sample:"Página de ejemplo. La propiedad, el agente y la agencia son ficticios."},
+fr:{signin:"S'inscrire / demander des infos",consent:"En vous inscrivant, vous acceptez que {agent} vous contacte au sujet de ce bien par téléphone, SMS ou e-mail. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour ne plus recevoir de SMS.",theAgent:"l'agent chargé de ce bien",call:"Appeler",text:"SMS",email:"E-mail",beds:"Chambres",baths:"Salles de bain",area:"Surface habitable",lot:"Terrain",year_built:"Année de construction",parking:"Stationnement",floor:"Étage",map:"Plan",cal:"Ajouter à l'agenda",open:"Ouvrir",photos:"Voir toutes les photos",next:"Prochaine visite libre",noTimes:"Aucune visite libre n'est prévue pour le moment. Contactez l'agent pour une visite privée.",areaNote:"Les informations sur le quartier et les écoles sont fournies par le vendeur. Vérifiez-les directement auprès des écoles et des sources locales.",demoSignin:"Page d'exemple : dans votre copie, ce bouton ouvre votre propre formulaire d'inscription.",formTab:"Ouvrir le formulaire dans un nouvel onglet",sample:"Page d'exemple. Le bien, l'agent et l'agence sont fictifs."},
+de:{signin:"Anmelden / Infos anfordern",consent:"Mit der Anmeldung stimmen Sie zu, dass {agent} Sie zu dieser Immobilie per Telefon, SMS oder E-Mail kontaktieren darf. Es können Gebühren für Nachrichten und Daten anfallen. Antworten Sie STOP, um keine SMS mehr zu erhalten.",theAgent:"die zuständige Ansprechperson",call:"Anrufen",text:"SMS",email:"E-Mail",beds:"Schlafzimmer",baths:"Bäder",area:"Wohnfläche",lot:"Grundstück",year_built:"Baujahr",parking:"Parken",floor:"Etage",map:"Karte",cal:"Zum Kalender hinzufügen",open:"Öffnen",photos:"Alle Fotos ansehen",next:"Nächste Besichtigung",noTimes:"Derzeit ist keine offene Besichtigung geplant. Kontaktieren Sie den Makler für einen privaten Termin.",areaNote:"Angaben zur Umgebung und zu Schulen stammen vom Verkäufer. Bitte prüfen Sie sie direkt bei den Schulen und örtlichen Stellen.",demoSignin:"Beispielseite: In Ihrer Kopie öffnet dieser Button Ihr eigenes Anmeldeformular.",formTab:"Formular in neuem Tab öffnen",sample:"Beispielseite. Immobilie, Makler und Maklerfirma sind fiktiv."},
+it:{signin:"Registrati / chiedi informazioni",consent:"Registrandoti, accetti che {agent} ti contatti in merito a questo immobile per telefono, SMS o e-mail. Potrebbero essere applicati costi per messaggi e dati. Rispondi STOP per non ricevere più SMS.",theAgent:"l'agente incaricato",call:"Chiama",text:"SMS",email:"Email",beds:"Camere",baths:"Bagni",area:"Superficie",lot:"Terreno",year_built:"Anno di costruzione",parking:"Parcheggio",floor:"Piano",map:"Mappa",cal:"Aggiungi al calendario",open:"Apri",photos:"Vedi tutte le foto",next:"Prossimo open house",noTimes:"Al momento non è previsto nessun open house. Contatta l'agente per una visita privata.",areaNote:"Le informazioni su quartiere e scuole sono fornite dal venditore. Verificale direttamente con le scuole e le fonti locali.",demoSignin:"Pagina di esempio: nella tua copia, questo pulsante apre il tuo modulo di registrazione.",formTab:"Apri il modulo in una nuova scheda",sample:"Pagina di esempio. Immobile, agente e agenzia sono immaginari."},
+pt:{signin:"Registrar visita / pedir informações",consent:"Ao se registrar, você concorda que {agent} entre em contato sobre este imóvel por telefone, mensagem de texto ou e-mail. Podem ser cobradas tarifas de mensagens e dados. Responda STOP para deixar de receber mensagens de texto.",theAgent:"o corretor responsável",call:"Ligar",text:"Mensagem",email:"E-mail",beds:"Quartos",baths:"Banheiros",area:"Área útil",lot:"Terreno",year_built:"Ano de construção",parking:"Garagem",floor:"Andar",map:"Mapa",cal:"Adicionar à agenda",open:"Abrir",photos:"Ver todas as fotos",next:"Próxima visitação aberta",noTimes:"Nenhuma visitação aberta agendada no momento. Fale com o corretor para uma visita particular.",areaNote:"As informações sobre o bairro e as escolas são fornecidas pelo vendedor. Confirme diretamente com as escolas e fontes locais.",demoSignin:"Página de exemplo: na sua cópia, este botão abre o seu próprio formulário de registro.",formTab:"Abrir o formulário em uma nova aba",sample:"Página de exemplo. O imóvel, o corretor e a imobiliária são fictícios."},
+zh:{signin:"登记 / 索取资料",consent:"登记即表示您同意{agent}通过电话、短信或电子邮件就此房产与您联系。可能产生短信和数据费用。回复 STOP 即可退订短信。",theAgent:"负责此房源的经纪人",call:"致电",text:"短信",email:"邮件",beds:"卧室",baths:"浴室",area:"居住面积",lot:"占地",year_built:"建造年份",parking:"停车",floor:"楼层",map:"地图",cal:"添加到日历",open:"打开",photos:"查看所有照片",next:"下次开放参观",noTimes:"目前没有安排开放参观。请联系经纪人预约私人看房。",areaNote:"社区和学校信息由卖方提供。请直接向学校和当地相关机构核实。",demoSignin:"示例页面：在您的副本中，此按钮会打开您自己的登记表。",formTab:"在新标签页中打开表单",sample:"示例房产页面。房产、经纪人和经纪公司均为虚构。"},
+ja:{signin:"記帳 / 資料請求",consent:"記帳いただくと、{agent}がこの物件について電話、テキストメッセージ、またはメールでご連絡することに同意したものとみなされます。メッセージおよびデータ通信料がかかる場合があります。テキストメッセージの配信を停止するには STOP と返信してください。",theAgent:"担当エージェント",call:"電話",text:"SMS",email:"メール",beds:"寝室",baths:"浴室",area:"居住面積",lot:"敷地",year_built:"築年",parking:"駐車場",floor:"階",map:"地図",cal:"カレンダーに追加",open:"開く",photos:"すべての写真を見る",next:"次回のオープンハウス",noTimes:"現在オープンハウスの予定はありません。個別の内見は担当者にお問い合わせください。",areaNote:"周辺環境と学校の情報は売主が提供したものです。学校や地域の情報源で直接ご確認ください。",demoSignin:"見本ページです。お客様のコピーでは、このボタンでご自身の記帳フォームが開きます。",formTab:"新しいタブでフォームを開く",sample:"見本の物件ページです。物件・担当者・会社は架空のものです。"},
+ko:{signin:"방문 등록 / 정보 요청",consent:"등록하시면 {agent}이(가) 이 매물과 관련하여 전화, 문자 또는 이메일로 연락하는 데 동의하게 됩니다. 메시지 및 데이터 요금이 부과될 수 있습니다. 문자 수신을 중단하려면 STOP이라고 회신하세요.",theAgent:"담당 중개인",call:"전화",text:"문자",email:"이메일",beds:"침실",baths:"욕실",area:"전용 면적",lot:"대지",year_built:"건축 연도",parking:"주차",floor:"층",map:"지도",cal:"캘린더에 추가",open:"열기",photos:"모든 사진 보기",next:"다음 오픈 하우스",noTimes:"현재 예정된 오픈 하우스가 없습니다. 개별 방문은 중개인에게 문의하세요.",areaNote:"주변 지역 및 학교 정보는 매도인이 제공한 것입니다. 학교와 지역 기관에 직접 확인하세요.",demoSignin:"샘플 페이지입니다. 사본에서는 이 버튼이 직접 만든 등록 양식을 엽니다.",formTab:"새 탭에서 양식 열기",sample:"샘플 매물 페이지입니다. 매물, 중개인, 중개업체는 모두 가상입니다."},
+ar:{signin:"سجّل حضورك / اطلب معلومات",consent:"بتسجيلك، توافق على أن يتواصل معك {agent} بخصوص هذا العقار عبر الهاتف أو الرسائل النصية أو البريد الإلكتروني. قد تُطبَّق رسوم الرسائل والبيانات. أرسل STOP لإيقاف الرسائل النصية.",theAgent:"الوكيل المسؤول",call:"اتصال",text:"رسالة",email:"بريد إلكتروني",beds:"غرف النوم",baths:"الحمّامات",area:"المساحة",lot:"الأرض",year_built:"سنة البناء",parking:"موقف السيارات",floor:"الطابق",map:"الخريطة",cal:"أضف إلى التقويم",open:"فتح",photos:"عرض كل الصور",next:"اليوم المفتوح القادم",noTimes:"لا يوجد يوم مفتوح مُجدول حاليًا. تواصل مع الوكيل لحجز معاينة خاصة.",areaNote:"معلومات الحي والمدارس مقدَّمة من البائع. يرجى التحقق منها مباشرةً لدى المدارس والمصادر المحلية.",demoSignin:"صفحة تجريبية: في نسختك، يفتح هذا الزر نموذج التسجيل الخاص بك.",formTab:"افتح النموذج في علامة تبويب جديدة",sample:"صفحة عقار تجريبية. العقار والوكيل والشركة خياليون."},
+hi:{signin:"साइन इन / जानकारी मांगें",consent:"साइन इन करके आप सहमत होते हैं कि {agent} इस प्रॉपर्टी के बारे में फ़ोन, टेक्स्ट मैसेज या ईमेल से आपसे संपर्क कर सकते हैं। मैसेज और डेटा शुल्क लागू हो सकते हैं। टेक्स्ट मैसेज बंद करने के लिए STOP लिखकर जवाब दें।",theAgent:"लिस्टिंग एजेंट",call:"कॉल करें",text:"मैसेज",email:"ईमेल",beds:"बेडरूम",baths:"बाथरूम",area:"क्षेत्रफल",lot:"प्लॉट",year_built:"निर्माण वर्ष",parking:"पार्किंग",floor:"मंज़िल",map:"नक्शा",cal:"कैलेंडर में जोड़ें",open:"खोलें",photos:"सभी फ़ोटो देखें",next:"अगला ओपन हाउस",noTimes:"अभी कोई ओपन हाउस तय नहीं है। निजी विज़िट के लिए एजेंट से संपर्क करें।",areaNote:"आस-पड़ोस और स्कूलों की जानकारी विक्रेता ने दी है। कृपया स्कूलों और स्थानीय स्रोतों से सीधे पुष्टि करें।",demoSignin:"नमूना पेज: आपकी कॉपी में यह बटन आपका अपना साइन-इन फ़ॉर्म खोलेगा।",formTab:"फ़ॉर्म नए टैब में खोलें",sample:"नमूना प्रॉपर्टी पेज। प्रॉपर्टी, एजेंट और ब्रोकरेज काल्पनिक हैं।"},
+ru:{signin:"Записаться / запросить информацию",consent:"Записываясь, вы соглашаетесь, что {agent} может связаться с вами по поводу этого объекта по телефону, SMS или электронной почте. Может взиматься плата за сообщения и передачу данных. Чтобы отказаться от SMS, ответьте STOP.",theAgent:"агент по этому объекту",call:"Позвонить",text:"SMS",email:"Эл. почта",beds:"Спальни",baths:"Санузлы",area:"Жилая площадь",lot:"Участок",year_built:"Год постройки",parking:"Парковка",floor:"Этаж",map:"Карта",cal:"Добавить в календарь",open:"Открыть",photos:"Все фотографии",next:"Ближайший день открытых дверей",noTimes:"Сейчас дни открытых дверей не запланированы. Свяжитесь с агентом, чтобы договориться о частном показе.",areaNote:"Сведения о районе и школах предоставлены продавцом. Пожалуйста, проверьте их непосредственно в школах и местных источниках.",demoSignin:"Пример страницы: в вашей копии эта кнопка открывает вашу собственную форму записи.",formTab:"Открыть форму в новой вкладке",sample:"Пример страницы объекта. Объект, агент и агентство вымышлены."}};
+const UIX={};for(const l in UIX)Object.assign(UI[l]=UI[l]||{},UIX[l]);  // per-variant wording (e.g. rental: "Next showing")
+const NATIVE={en:"English",es:"Español",fr:"Français",de:"Deutsch",it:"Italiano",pt:"Português",zh:"中文",ja:"日本語",ko:"한국어",ar:"العربية",hi:"हिन्दी",ru:"Русский"};
+const LOCALE={zh:"zh-CN"};
+const RTL=new Set(["ar","he","fa","ur"]);
+const FACTS=["beds","baths","area","lot","year_built","parking","floor"];
+const TABS=["Basics","Sections","Details","Look"];
+/* Guard against renamed tabs: gviz falls back to another tab when a name is not found. */
+const VALID={Basics:r=>"Value" in r[0]&&r.some(x=>norm(x.Setting)==="address"),Sections:r=>"Type" in r[0]&&"Section" in r[0],Details:r=>"Date" in r[0]&&"Section" in r[0],Look:r=>"Value" in r[0]&&r.some(x=>norm(x.Setting)==="main_color")};
+
+let T=null,lang="en",SRC="en",LANGS=["en"],isSample=false;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const t=k=>(UI[lang]||UI.en)[k]||UI.en[k];
+const yes=v=>!/^(no|false|0|hide)$/i.test(String(v||"").trim());
+const safeUrl=u=>/^https?:\/\//i.test(String(u||"").trim())?String(u).trim():"";
+const maps=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
+const hex=(v,d)=>/^#?[0-9a-f]{6}$/i.test(String(v||"").trim())?"#"+String(v).trim().replace("#",""):d;
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"s";
+const norm=s=>String(s||"").toLowerCase().replace(/\s+/g," ").trim();
+const ext=u=>`href="${esc(u)}" target="_blank" rel="noopener"`;
+const tel=s=>String(s||"").replace(/[^\d+]/g,"");
+
+function parseCSV(txt){const rows=[];let r=[],f="",q=false;for(let i=0;i<txt.length;i++){const c=txt[i];if(q){if(c=='"'&&txt[i+1]=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==","){r.push(f);f=""}else if(c=="\n"){r.push(f);rows.push(r);r=[];f=""}else if(c!="\r")f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
+function toObjects(csv){
+  const rows=parseCSV(csv||"").filter(r=>r.some(c=>c.trim()!==""));
+  if(!rows.length)return[];
+  const h=rows[0].map(x=>x.trim());
+  const clean=v=>{v=(v||"").trim();return /^#(N\/A|ERROR!|VALUE!|REF!|NAME\?|DIV\/0!|NUM!|NULL!)/.test(v)||/^(Loading|Cargando)\.\.\.$/i.test(v)?"":v};
+  return rows.slice(1).map(r=>{const o={};h.forEach((k,i)=>{if(k)o[k]=clean(r[i])});return o});
+}
+/* "Text" = what the agent typed (SRC language); "Text (es)" = automatic translation. Missing -> original. */
+const tr=(row,base)=>row?((lang!==SRC&&row[`${base} (${lang})`])||row[base]||""):"";
+/* QC M1: consent names who will contact the visitor (agent_name from Basics) and how. Not legal advice. */
+const consentText=()=>t("consent").replace("{agent}",basic("agent_name")||t("theAgent"));
+const basic=k=>tr(T.Basics.find(r=>norm(r.Setting)===k),"Value");
+const look=k=>(T.Look.find(r=>norm(r.Setting)===k)||{}).Value||"";
+function photoUrl(u){u=safeUrl(u);if(!u)return"";const m=u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]{20,})/);return m?`https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600`:u}
+const isFolder=u=>/drive\.google\.com\/drive\/(u\/\d+\/)?folders\//.test(u);
+const relImg=u=>/^[\w\/.-]+\.(jpe?g|png|webp|svg)$/i.test(String(u||"").trim())?String(u).trim():"";
+const isImage=u=>/drive\.google\.com\/(file\/d\/|open\?id=|uc\?)/.test(u)||/\.(jpe?g|png|webp|gif|svg)(\?|$)/i.test(u)||/googleusercontent\.com/.test(u);
+const imgOf=g=>safeUrl(g.Link)||relImg(g.Link);
+
+/* Dates: 2027-04-17, 4/17/2027 (US) or 17/4/2027 and 17.04.2027 (day first). Time: 1:00 PM, 13:00, 1pm. */
+function parseWhen(d,tm,defH=0){
+  d=String(d||"").trim();let y,m,day,x;
+  if((x=d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))[y,m,day]=[+x[1],+x[2],+x[3]];
+  else if((x=d.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/))){const a=+x[1],b=+x[2];y=+x[3];if(d.includes(".")||a>12){day=a;m=b}else{m=a;day=b}}
+  else return null;
+  let h=defH,mi=0;const s=String(tm||"").trim().toLowerCase();
+  if((x=s.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/))){h=+x[1];mi=+(x[2]||0);if(/^p/.test(x[3]||"")&&h<12)h+=12;if(/^a/.test(x[3]||"")&&h===12)h=0}
+  const D=new Date(y,m-1,day,h,mi);return isNaN(D)||D.getMonth()!==m-1?null:D;
+}
+const loc=()=>LOCALE[lang]||lang;
+const fmtDay=D=>{try{return D.toLocaleDateString(loc(),{weekday:"long",month:"long",day:"numeric"})}catch(e){return D.toDateString()}};
+const fmtTime=D=>{try{return D.toLocaleTimeString(loc(),{hour:"numeric",minute:"2-digit"})}catch(e){return D.toTimeString().slice(0,5)}};
+const pad=n=>String(n).padStart(2,"0");
+const stamp=D=>`${D.getFullYear()}${pad(D.getMonth()+1)}${pad(D.getDate())}T${pad(D.getHours())}${pad(D.getMinutes())}00`;
+
+/* Open house rows -> {g,start,end}; past ones are dropped. */
+function openHouses(secKey){
+  const now=Date.now();
+  return T.Details.filter(g=>norm(g.Section)===norm(secKey)&&yes(g.Show)).map(g=>{
+    const start=parseWhen(g.Date,g.Start,9);if(!start)return null;
+    let end=parseWhen(g.Date,g.End,0);if(!g.End||!end||end<=start)end=g.Start?new Date(+start+3*36e5):parseWhen(g.Date,"23:59");
+    return {g,start,end};
+  }).filter(o=>o&&o.end>now).sort((a,b)=>a.start-b.start);
+}
+const timesKey=()=>(T.Sections.find(s=>norm(s.Type)==="times"&&yes(s.Show))||{}).Section;
+const range=o=>`${fmtDay(o.start)} · ${o.g.Start?fmtTime(o.start)+(o.g.End?"–"+fmtTime(o.end):""):""}`.replace(/ · $/,"");
+const calUrl=o=>`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((tr(o.g,"Title")||"Open house")+": "+basic("address"))}&dates=${stamp(o.start)}/${stamp(o.end)}&location=${encodeURIComponent(basic("address"))}&details=${encodeURIComponent(location.href.split("#")[0])}`;
+
+function detectLangs(){
+  SRC=String((T.Basics.find(r=>norm(r.Setting)==="written_in")||{}).Value||"en").trim().toLowerCase().slice(0,2)||"en";
+  const found=new Set([SRC]);
+  for(const tab of ["Basics","Sections","Details"])for(const row of T[tab])for(const k in row){const m=k.match(/\(([a-z]{2})\)$/i);if(m&&row[k])found.add(m[1].toLowerCase())}
+  const want=String((T.Basics.find(r=>norm(r.Setting)==="languages")||{}).Value||"").trim();
+  const pick=want.toLowerCase().match(/\b[a-z]{2}\b/g);
+  LANGS=[...found].filter(l=>UI[l]).filter(l=>l===SRC||!pick||/^all$/i.test(want)||pick.includes(l));
+  lang=SRC;
+}
+function factVal(k){const v=basic(k);if(!v)return"";return k==="area"&&basic("area_unit")?`${v} ${basic("area_unit")}`:v}
+
+/* Sign-in target: the form link (edit links rewritten), or in the Etsy sample the on-page sign-in section. */
+function signinHref(){
+  const l=safeUrl(basic("signin_link")).replace(/^(https:\/\/docs\.google\.com\/forms\/d\/[\w-]+)\/edit\b.*$/,"$1/viewform");
+  return isSample?"":l;
+}
+function sectionHTML(sec,si){
+  const key=sec.Section,name=tr(sec,"Section")||key,id=slug(key)+"-"+si,type=norm(sec.Type||"Cards");
+  const items=T.Details.filter(g=>norm(g.Section)===norm(key)&&yes(g.Show));
+  const h3=g=>tr(g,"Title")?`<h3>${esc(tr(g,"Title"))}</h3>`:"";
+  const p=g=>tr(g,"Text")?`<p>${esc(tr(g,"Text"))}</p>`:"";
+  const note=g=>tr(g,"Note")?`<div class="note">${esc(tr(g,"Note"))}</div>`:"";
+  const btn=g=>safeUrl(g.Link)?`<div class="row"><a class="btn ghost sm" ${ext(safeUrl(g.Link))}>${esc(t("open"))}</a></div>`:"";
+  let inner="";
+  if(type==="highlights"){if(!items.length)return null;
+    inner=`<ul class="list hl">${items.map(g=>`<li class="item"><div>${h3(g)}${p(g)}</div></li>`).join("")}</ul>`;
+  }else if(type==="facts"){
+    const rows=FACTS.filter(factVal).map(k=>[t(k),factVal(k)]).concat(items.filter(g=>tr(g,"Title")).map(g=>[tr(g,"Title"),tr(g,"Note")||tr(g,"Text")]));
+    if(!rows.length)return null;
+    inner=`<dl class="facts">${rows.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join("")}</dl>`;
+  }else if(type==="gallery"){
+    const pics=items.filter(g=>isImage(imgOf(g))),folders=items.filter(g=>isFolder(safeUrl(g.Link)));
+    if(!pics.length&&!folders.length)return null;
+    inner=(pics.length?`<div class="gal">${pics.map(g=>`<a ${ext(imgOf(g))}><img loading="lazy" src="${esc(photoUrl(g.Link)||imgOf(g))}" alt="${esc(tr(g,"Title"))}" onerror="this.closest('a').remove()">${tr(g,"Title")?`<span>${esc(tr(g,"Title"))}</span>`:""}</a>`).join("")}</div>`:"")+
+      folders.map(g=>`<div class="row" style="margin-top:14px"><a class="btn ghost" ${ext(safeUrl(g.Link))}>${esc(t("photos"))}</a></div>`).join("");
+  }else if(type==="rooms"){if(!items.length)return null;
+    inner=`<ul class="list">${items.map(g=>{const im=isImage(imgOf(g))?photoUrl(g.Link)||imgOf(g):"";
+      return`<li class="item${im?" room":""}"><div>${h3(g)}${note(g)}${p(g)}</div>${im?`<img loading="lazy" src="${esc(im)}" alt="" onerror="this.remove()">`:""}</li>`}).join("")}</ul>`;
+  }else if(type==="area"){if(!items.length)return null;
+    inner=`<ul class="list">${items.map(g=>`<li class="item">${h3(g)}${note(g)}${p(g)}${btn(g)}</li>`).join("")}</ul><p class="fine">${esc(t("areaNote"))}</p>`;
+  }else if(type==="times"){
+    const oh=openHouses(key);
+    inner=oh.length?`<ul class="list oh">${oh.map(o=>{let mon="";try{mon=o.start.toLocaleDateString(loc(),{month:"short"})}catch(e){}
+      return`<li class="item"><div class="cal"><small>${esc(mon)}</small><b>${o.start.getDate()}</b></div><div>${h3(o.g)}<div class="when">${esc(range(o))}</div>${p(o.g)}
+      <div class="row"><a class="btn ghost sm" ${ext(calUrl(o))}>${esc(t("cal"))}</a>${basic("address")?`<a class="btn ghost sm" ${ext(maps(basic("address")))}>${esc(t("map"))}</a>`:""}</div></div></li>`}).join("")}</ul>`
+      :`<p class="item">${esc(t("noTimes"))}</p>`;
+  }else if(type==="links"){if(!items.length)return null;
+    inner=`<div class="row">${items.map(g=>safeUrl(g.Link)?`<a class="btn ghost" ${ext(safeUrl(g.Link))}>${esc(tr(g,"Title")||t("open"))}</a>`:`<span class="item">${esc(tr(g,"Title"))}</span>`).join("")}</div>`;
+  }else if(type==="agent"){
+    const nm=basic("agent_name");if(!nm)return null;
+    const ph=basic("agent_phone"),em=basic("agent_email"),pic=photoUrl(look("agent_photo"));
+    const ini=nm.split(/\s+/).map(w=>w[0]).slice(0,2).join("");
+    inner=`<div class="item agent"><div class="av">${pic?`<img src="${esc(pic)}" alt="" onerror="this.remove()">`:""}${pic?"":esc(ini)}</div>
+      <div><h3>${esc(nm)}</h3><div class="sub">${esc([basic("agent_title"),basic("brokerage")].filter(Boolean).join(" · "))}</div>${basic("license")?`<div class="sub">${esc(basic("license"))}</div>`:""}</div>
+      ${items.map(p).join("")}
+      <div class="row">${ph?`<a class="btn sm" href="tel:${esc(tel(ph))}">${esc(t("call"))} ${esc(ph)}</a><a class="btn ghost sm" href="sms:${esc(tel(ph))}">${esc(t("text"))}</a>`:""}${em?`<a class="btn ghost sm" href="mailto:${esc(em)}?subject=${encodeURIComponent(basic("address"))}">${esc(t("email"))}</a>`:""}</div></div>`;
+  }else if(type==="signin"){
+    const link=safeUrl(basic("signin_link")).replace(/^(https:\/\/docs\.google\.com\/forms\/d\/[\w-]+)\/edit\b.*$/,"$1/viewform");
+    const fm=link.match(/^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]+)\/viewform/);
+    const embed=!isSample&&fm&&/^embed/i.test(basic("signin_style"));
+    if(!link&&!isSample)return null;
+    inner=`<div class="signin">${items.map(g=>h3(g)+p(g)).join("")}
+      ${isSample?`<p class="fine demo">${esc(t("demoSignin"))}</p>`:embed?`<iframe src="https://docs.google.com/forms/d/e/${fm[1]}/viewform?embedded=true" title="${esc(t("signin"))}" loading="lazy"></iframe><div class="row" style="margin-top:10px"><a class="btn ghost" ${ext(link)}>${esc(t("formTab"))}</a></div>`
+      :`<div class="row" style="margin-top:12px"><a class="btn big" id="signinBtn" ${ext(link)}>${esc(t("signin"))}</a></div>`}
+      <p class="consent" id="consent">${esc(consentText())}</p></div>`;
+  }else{if(!items.length)return null;
+    inner=`<ul class="list">${items.map(g=>`<li class="item">${h3(g)}${note(g)}${p(g)}${btn(g)}</li>`).join("")}</ul>`;
+  }
+  return {id,name,type,html:`<section id="${id}" class="s-${type}"><h2>${esc(name)}</h2>${inner}</section>`};
+}
+
+function render(){
+  const y=scrollY;
+  document.documentElement.lang=lang;document.documentElement.dir=RTL.has(lang)?"rtl":"ltr";
+  const r=document.documentElement.style;
+  for(const [k,v] of [["main_color","--main"],["accent_color","--accent"]]){const c=hex(look(k),"");if(c)r.setProperty(v,c)}
+  const addr=basic("address");document.title=addr||"Open house";
+  const photo=render.photoFail?"":photoUrl(look("hero_photo"));
+  const secs=T.Sections.filter(s=>s.Section&&yes(s.Show)).map(sectionHTML).filter(Boolean);
+  const sIn=secs.find(s=>s.type==="signin"),href=signinHref();
+  const signA=cls=>href?`<a class="btn ${cls}" ${ext(href)} data-signin>${esc(t("signin"))}</a>`:sIn?`<a class="btn ${cls}" href="#${sIn.id}" data-signin>${esc(t("signin"))}</a>`:"";
+  const ph=basic("agent_phone");
+  const tk=timesKey(),nx=tk?openHouses(tk)[0]:null;
+  const chips=["beds","baths","area"].filter(factVal).map(k=>`<li><b>${esc(factVal(k))}</b>${esc(t(k))}</li>`).join("");
+  const langUI=LANGS.length>4?`<label class="langs"><select id="langSel" aria-label="Language">${LANGS.map(l=>`<option value="${l}"${l===lang?" selected":""}>${NATIVE[l]||l}</option>`).join("")}</select></label>`
+    :LANGS.length>1?`<div class="langs" role="group" aria-label="Language">${LANGS.map(l=>`<button data-lang="${l}" aria-pressed="${l===lang}">${l.toUpperCase()}</button>`).join("")}</div>`:"";
+  $("app").innerHTML=`
+  <header class="hero">${langUI}
+    <div class="pic">${photo?`<img src="${esc(photo)}" alt="" onerror="window.__ohPhotoFail&&window.__ohPhotoFail()">`:COVER}${basic("status")?`<span class="badge">${esc(basic("status"))}</span>`:""}</div>
+    <div class="sum">
+      ${basic("price")?`<div class="price">${esc(basic("price"))}${basic("price_note")?`<small>${esc(basic("price_note"))}</small>`:""}</div>`:""}
+      ${basic("headline")?`<h1>${esc(basic("headline"))}</h1>`:""}
+      ${addr?`<div class="addr"><a ${ext(maps(addr))}>${esc(addr)}</a></div>`:""}
+      ${chips?`<ul class="chips">${chips}</ul>`:""}
+      ${nx?`<p class="next">${esc(t("next"))}: <b>${esc(range(nx))}</b></p>`:""}
+      <div class="row">${signA("big")}${ph?`<a class="btn ghost" href="tel:${esc(tel(ph))}">${esc(t("call"))}</a>`:""}</div>
+      ${signA("")?`<p class="consent">${esc(consentText())}</p>`:""}
+    </div>
+  </header>
+  ${secs.length>1?`<nav class="tabs" id="tabs">${secs.map(s=>`<a href="#${s.id}" data-s="${s.id}">${esc(s.name)}</a>`).join("")}</nav>`:""}
+  ${secs.map(s=>s.html).join("")}
+  <footer>${basic("disclaimer")?`<p>${esc(basic("disclaimer"))}</p>`:""}${basic("brokerage")?`<p>${esc(basic("brokerage"))}${basic("license")?" · "+esc(basic("license")):""}</p>`:""}${isSample?`<p class="demo">${esc(t("sample"))}</p>`:""}</footer>`;
+  $("bar").innerHTML=signA("")+(ph?`<a class="btn ghost" style="flex:0 0 auto" href="tel:${esc(tel(ph))}" aria-label="${esc(t("call"))}">${esc(t("call"))}</a>`:"");
+  $("bar").dir=document.documentElement.dir;
+  render.secs=secs.map(s=>s.id);
+  scrollTo(0,y);spy();
+}
+window.__ohPhotoFail=()=>{if(!render.photoFail){render.photoFail=true;render()}};
+function spy(){
+  const ids=render.secs||[];let cur=ids[0];
+  for(const s of ids){const el=$(s);if(el&&el.getBoundingClientRect().top<120)cur=s}
+  document.querySelectorAll("#tabs a").forEach(a=>a.classList.toggle("on",a.dataset.s===cur));
+  const h=document.querySelector(".sum .row"),b=$("bar");if(h&&b)b.classList.toggle("on",h.getBoundingClientRect().bottom<0&&!!b.innerHTML);
+}
+function setLang(l){lang=l;try{localStorage.setItem("oh:"+(render.key||"sample"),l)}catch(e){}render()}
+$("app").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.lang)setLang(b.dataset.lang);else if(b.id==="retry")start()});
+$("app").addEventListener("change",e=>{if(e.target.id==="langSel")setLang(e.target.value)});
+addEventListener("scroll",spy,{passive:true});
+
+/* Etsy sample: keep the demo's open-house dates in the future by moving them forward whole weeks (weekday kept). */
+function rebaseSample(){
+  const k=timesKey();if(!k)return;const rows=T.Details.filter(g=>norm(g.Section)===norm(k)&&parseWhen(g.Date));
+  if(!rows.length||openHouses(k).length)return;
+  const first=Math.min(...rows.map(g=>+parseWhen(g.Date))),wk=Math.ceil((Date.now()-first)/6048e5)+1;
+  rows.forEach(g=>{const D=new Date(+parseWhen(g.Date)+wk*6048e5);g.Date=`${D.getFullYear()}-${pad(D.getMonth()+1)}-${pad(D.getDate())}`});
+}
+function sheetId(v){const m=String(v||"").match(/\/d\/([a-zA-Z0-9_-]{20,})/);return m?m[1]:(/^[a-zA-Z0-9_-]{20,}$/.test(v||"")?v:"")}
+async function start(){
+  let p;try{p=new URLSearchParams(location.search)}catch(e){p=new URLSearchParams()}
+  const id=sheetId(p.get("id")),base=p.get("csv");
+  let src=null;
+  if(id)src=tab=>`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`;
+  else if(base)src=tab=>`${base.replace(/\/$/,"")}/${encodeURIComponent(tab)}.csv`; /* test hook: local CSV fixture */
+  try{
+    if(src){
+      const texts=await Promise.all(TABS.map(async tab=>{try{const r=await fetch(src(tab),{cache:"no-store"});return r.ok?await r.text():""}catch(e){return""}}));
+      T={};TABS.forEach((tab,i)=>{const rows=toObjects(texts[i]);T[tab]=rows.length&&VALID[tab](rows)?rows:[]});
+      if(!T.Basics.length)throw new Error("empty");
+      render.key=id||base;
+    }else{T={};TABS.forEach(tab=>T[tab]=toObjects(SAMPLE&&SAMPLE[tab]));isSample=true;if(!T.Basics.length)throw new Error("no sample");rebaseSample()}
+  }catch(err){
+    $("app").innerHTML=`<div class="state"><div><p>${esc(UI.en.err)}</p><button class="btn" id="retry">${esc(UI.en.retry)}</button></div></div>`;return;
+  }
+  detectLangs();
+  let want=p.get("lang");try{want=want||localStorage.getItem("oh:"+(render.key||"sample"))}catch(e){}
+  want=want||(navigator.language||"en").slice(0,2).toLowerCase();
+  if(LANGS.includes(want))lang=want;
+  render();
+}
+start();
+}
+</script>
+</body>
+</html>
